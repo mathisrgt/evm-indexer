@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Operations</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      padding: 0;
+      background-color: #f4f4f9;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #f4a261;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+    .form-container {
+      margin: 20px 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .form-container form {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .form-container input, button {
+      padding: 10px;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      background-color: #f4a261;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #e76f51;
+    }
+  </style>
+</head>
+<body>
+  <h1>User Operations</h1>
+
+  <div class="form-container">
+    <!-- Search by User Op Hash -->
+    <form id="user-op-hash-form">
+      <label for="user-op-hash">Search by User Op Hash:</label>
+      <input type="text" id="user-op-hash" placeholder="Enter user_op_hash">
+      <button type="submit">Search</button>
+    </form>
+
+    <!-- Search by Sender -->
+    <form id="sender-form">
+      <label for="sender">Search by Sender:</label>
+      <input type="text" id="sender" placeholder="Enter sender address">
+      <button type="submit">Search</button>
+    </form>
+
+    <!-- Refresh Last 10 User Operations -->
+    <form id="refresh-form">
+      <label>Refresh Last 10 User Operations:</label>
+      <button type="button" onclick="fetchLastUserOperations()">Refresh</button>
+    </form>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>User Op Hash</th>
+        <th>Sender</th>
+        <th>Paymaster</th>
+        <th>Nonce</th>
+        <th>Success</th>
+        <th>Actual Gas Cost</th>
+        <th>Actual Gas Used</th>
+      </tr>
+    </thead>
+    <tbody id="user-operations-table">
+      <tr>
+        <td colspan="7">Loading...</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <script>
+    // Fetch the last user operations from the API
+    async function fetchLastUserOperations() {
+      try {
+        const response = await fetch('http://localhost:3030/last_user_operations');
+        if (!response.ok) {
+          throw new Error(`API error: ${response.statusText}`);
+        }
+        const data = await response.json();
+        populateTable(data);
+      } catch (error) {
+        console.error('Error fetching user operations:', error);
+        const tableBody = document.getElementById('user-operations-table');
+        tableBody.innerHTML = `<tr><td colspan="7">Error loading data</td></tr>`;
+      }
+    }
+
+    // Search user operation by hash
+    async function searchByUserOpHash(userOpHash) {
+      try {
+        const response = await fetch(`http://localhost:3030/user_op_hash/${userOpHash}`);
+        if (!response.ok) {
+          throw new Error(`API error: ${response.statusText}`);
+        }
+        const data = await response.json();
+        populateTable([data]); // Wrap in array to reuse populateTable
+      } catch (error) {
+        console.error('Error fetching user operation by hash:', error);
+        const tableBody = document.getElementById('user-operations-table');
+        tableBody.innerHTML = `<tr><td colspan="7">No results found for hash: ${userOpHash}</td></tr>`;
+      }
+    }
+
+    // Search user operations by sender
+    async function searchBySender(sender) {
+      try {
+        const response = await fetch(`http://localhost:3030/sender/${sender}`);
+        if (!response.ok) {
+          throw new Error(`API error: ${response.statusText}`);
+        }
+        const data = await response.json();
+        populateTable(data);
+      } catch (error) {
+        console.error('Error fetching user operations by sender:', error);
+        const tableBody = document.getElementById('user-operations-table');
+        tableBody.innerHTML = `<tr><td colspan="7">No results found for sender: ${sender}</td></tr>`;
+      }
+    }
+
+    // Populate the table with user operations
+    function populateTable(operations) {
+      const tableBody = document.getElementById('user-operations-table');
+      if (operations.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="7">No data available</td></tr>`;
+        return;
+      }
+      tableBody.innerHTML = '';
+      operations.forEach(op => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${op.user_op_hash}</td>
+          <td>${op.sender}</td>
+          <td>${op.paymaster}</td>
+          <td>${op.nonce}</td>
+          <td>${op.success ? '✅' : '❌'}</td>
+          <td>${op.actual_gas_cost}</td>
+          <td>${op.actual_gas_used}</td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+
+    // Form submission handlers
+    document.getElementById('user-op-hash-form').addEventListener('submit', event => {
+      event.preventDefault();
+      const userOpHash = document.getElementById('user-op-hash').value.trim();
+      if (userOpHash) searchByUserOpHash(userOpHash);
+    });
+
+    document.getElementById('sender-form').addEventListener('submit', event => {
+      event.preventDefault();
+      const sender = document.getElementById('sender').value.trim();
+      if (sender) searchBySender(sender);
+    });
+
+    // Fetch initial data
+    fetchLastUserOperations();
+  </script>
+</body>
+</html>
