@@ -194,9 +194,15 @@ async fn start_api(pool: Arc<PgPool>) {
         });
 
     let routes = query_user_op_hash.or(query_last_op);
+    
+    let cors = warp::cors()
+        .allow_any_origin() 
+        .allow_methods(vec!["GET", "POST"]) 
+        .allow_headers(vec!["Content-Type"]);
 
-    warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
+    warp::serve(routes.with(cors)).run(([127, 0, 0, 1], 3030)).await;
 }
+
 
 async fn connect_to_database() -> PgPool {
     ensure_database_exists()
